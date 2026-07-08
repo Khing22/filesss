@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Server - Settings</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1>⚙️ Settings</h1>
+                <div class="header-right">
+                    <span id="userDisplay" class="user-display"></span>
+                    <button id="logoutBtn" class="btn-logout">Logout</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="sidebar-nav">
+            <div class="nav-item">
+                <a href="upload-dashboard.html" class="nav-link">📤 Upload Documents</a>
+            </div>
+            <div class="nav-item">
+                <a href="documents-dashboard.html" class="nav-link">📄 View Documents</a>
+            </div>
+            <div class="nav-item">
+                <a href="users-dashboard.html" class="nav-link">👥 User Management</a>
+            </div>
+            <div class="nav-item">
+                <a href="settings-dashboard.html" class="nav-link active">⚙️ Settings</a>
+            </div>
+        </nav>
+
+        <!-- Content Area -->
+        <div class="content-area">
+            <div class="content-grid">
+                <!-- Upload Password Settings -->
+                <div class="section-box">
+                    <h2>🔐 Upload Security</h2>
+                    <p class="section-description">Manage the password required for document uploads.</p>
+                    
+                    <div class="settings-form">
+                        <div class="form-group">
+                            <label for="newUploadPassword">New Upload Password</label>
+                            <input type="password" id="newUploadPassword" placeholder="Enter new upload password" minlength="4">
+                            <small>Minimum 4 characters. This password is required to upload documents.</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="confirmPassword">Confirm Password</label>
+                            <input type="password" id="confirmPassword" placeholder="Confirm password" minlength="4">
+                        </div>
+
+                        <button id="updatePasswordBtn" class="btn-primary btn-large">Update Upload Password</button>
+                        <div id="passwordMessage" class="message-box"></div>
+                    </div>
+
+                    <div class="info-box">
+                        <strong>Current Status:</strong> Upload password protection is <span class="status-enabled">ENABLED</span>
+                    </div>
+                </div>
+
+                <!-- Personal Settings -->
+                <div class="section-box">
+                    <h2>👤 Personal Settings</h2>
+                    <p class="section-description">Manage your account settings.</p>
+                    
+                    <div class="settings-form">
+                        <div class="form-group">
+                            <label>Current Username</label>
+                            <input type="text" id="currentUsername" disabled>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="newPassword">New Password</label>
+                            <input type="password" id="newPassword" placeholder="Leave blank to keep current password" minlength="4">
+                            <small>Only fill if you want to change your password</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="confirmNewPassword">Confirm New Password</label>
+                            <input type="password" id="confirmNewPassword" placeholder="Confirm new password" minlength="4">
+                        </div>
+
+                        <button id="updateUserPasswordBtn" class="btn-primary btn-large">Update My Password</button>
+                        <div id="userPasswordMessage" class="message-box"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Information -->
+             <!-- <div class="section-box">
+                <h2>ℹ️ System Information</h2>
+                <div class="system-info">
+                    <div class="info-row">
+                        <span class="info-label">Application:</span>
+                        <span class="info-value">File Server v1.0.0</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Version:</span>
+                        <span class="info-value">1.0.0</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Database:</span>
+                        <span class="info-value">SQLite 3</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Server:</span>
+                        <span class="info-value">Node.js / Express</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Server Status:</span>
+                        <span class="info-value"><span class="status-online">● Online</span></span>
+                    </div>
+                </div>
+            </div> -->
+
+            <!-- Storage Information -->
+            <div class="section-box">
+                <h2>💾 Storage Information</h2>
+                <div id="storageInfo" class="storage-info">
+                    <div class="storage-stat">
+                        <div class="stat-label">Total Documents</div>
+                        <div class="stat-value" id="totalStorageDocs">0</div>
+                    </div>
+                    <div class="storage-stat">
+                        <div class="stat-label">Storage Used</div>
+                        <div class="stat-value" id="totalStorageUsed">0 MB</div>
+                    </div>
+                    <div class="storage-stat">
+                        <div class="stat-label">Largest File</div>
+                        <div class="stat-value" id="largestFile">0 KB</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Danger Zone -->
+            <div class="section-box danger-zone">
+                <h2>⚠️ Danger Zone</h2>
+                <p class="section-description">Irreversible actions. Be careful!</p>
+                
+                <div class="danger-actions">
+                    <button id="clearCacheBtn" class="btn-small btn-warning">Clear Cache</button>
+                    <button id="resetSettingsBtn" class="btn-small btn-danger">Reset to Default Settings</button>
+                </div>
+                <div id="dangerMessage" class="message-box"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuthentication();
+            initializeSettings();
+        });
+
+        function initializeSettings() {
+            document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+            document.getElementById('updatePasswordBtn').addEventListener('click', handleUpdatePassword);
+            document.getElementById('updateUserPasswordBtn').addEventListener('click', handleUpdateUserPassword);
+            document.getElementById('clearCacheBtn').addEventListener('click', handleClearCache);
+            document.getElementById('resetSettingsBtn').addEventListener('click', handleResetSettings);
+
+            // Load current username
+            fetch('/api/check-auth')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.authenticated) {
+                        document.getElementById('currentUsername').value = data.user.username;
+                        localStorage.setItem('currentUser', JSON.stringify(data.user));
+                    }
+                })
+                .catch(err => console.error('Error:', err));
+
+            // Load storage stats
+            loadStorageStats();
+        }
+
+        async function handleUpdatePassword() {
+            const newPassword = document.getElementById('newUploadPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const messageDiv = document.getElementById('passwordMessage');
+
+            messageDiv.className = 'message-box';
+            messageDiv.classList.remove('show');
+
+            if (!newPassword || !confirmPassword) {
+                messageDiv.textContent = 'Please enter and confirm the password';
+                messageDiv.classList.add('error', 'show');
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                messageDiv.textContent = 'Passwords do not match';
+                messageDiv.classList.add('error', 'show');
+                return;
+            }
+
+            if (newPassword.length < 4) {
+                messageDiv.textContent = 'Password must be at least 4 characters';
+                messageDiv.classList.add('error', 'show');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/settings/update-password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ newPassword })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    messageDiv.textContent = 'Upload password updated successfully!';
+                    messageDiv.classList.add('success', 'show');
+                    document.getElementById('newUploadPassword').value = '';
+                    document.getElementById('confirmPassword').value = '';
+                    setTimeout(() => {
+                        messageDiv.classList.remove('show');
+                    }, 3000);
+                } else {
+                    messageDiv.textContent = data.error || 'Failed to update password';
+                    messageDiv.classList.add('error', 'show');
+                }
+            } catch (error) {
+                messageDiv.textContent = 'An error occurred';
+                messageDiv.classList.add('error', 'show');
+                console.error('Error:', error);
+            }
+        }
+
+        async function handleUpdateUserPassword() {
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmNewPassword').value;
+            const messageDiv = document.getElementById('userPasswordMessage');
+
+            messageDiv.className = 'message-box';
+            messageDiv.classList.remove('show');
+
+            if (!newPassword || !confirmPassword) {
+                messageDiv.textContent = 'Please enter and confirm your new password';
+                messageDiv.classList.add('error', 'show');
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                messageDiv.textContent = 'Passwords do not match';
+                messageDiv.classList.add('error', 'show');
+                return;
+            }
+
+            if (newPassword.length < 4) {
+                messageDiv.textContent = 'Password must be at least 4 characters';
+                messageDiv.classList.add('error', 'show');
+                return;
+            }
+
+            messageDiv.textContent = 'Password updated successfully!';
+            messageDiv.classList.add('success', 'show');
+            document.getElementById('newPassword').value = '';
+            document.getElementById('confirmNewPassword').value = '';
+
+            setTimeout(() => {
+                messageDiv.classList.remove('show');
+            }, 3000);
+        }
+
+        function handleClearCache() {
+            localStorage.clear();
+            const messageDiv = document.getElementById('dangerMessage');
+            messageDiv.className = 'message-box success show';
+            messageDiv.textContent = 'Cache cleared successfully!';
+            setTimeout(() => {
+                messageDiv.classList.remove('show');
+            }, 3000);
+        }
+
+        function handleResetSettings() {
+            if (!confirm('Are you sure? This will reset all settings to default.')) {
+                return;
+            }
+
+            const messageDiv = document.getElementById('dangerMessage');
+            messageDiv.className = 'message-box success show';
+            messageDiv.textContent = 'Settings reset to default!';
+            setTimeout(() => {
+                messageDiv.classList.remove('show');
+            }, 3000);
+        }
+
+        async function loadStorageStats() {
+            try {
+                const response = await fetch('/api/documents');
+                const documents = await response.json();
+
+                const totalSize = documents.reduce((sum, d) => sum + (d.size || 0), 0);
+                const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(2);
+                const largestFile = documents.length > 0 
+                    ? Math.max(...documents.map(d => d.size || 0)) / 1024
+                    : 0;
+
+                document.getElementById('totalStorageDocs').textContent = documents.length;
+                document.getElementById('totalStorageUsed').textContent = totalSizeMB + ' MB';
+                document.getElementById('largestFile').textContent = largestFile.toFixed(2) + ' KB';
+            } catch (error) {
+                console.error('Error loading storage stats:', error);
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

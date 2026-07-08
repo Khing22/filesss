@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Server - View Documents</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1>📄 View Documents</h1>
+                <div class="header-right">
+                    <span id="userDisplay" class="user-display"></span>
+                    <button id="logoutBtn" class="btn-logout">Logout</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="sidebar-nav">
+            <div class="nav-item">
+                <a href="upload-dashboard.html" class="nav-link">📤 Upload Documents</a>
+            </div>
+            <div class="nav-item">
+                <a href="documents-dashboard.html" class="nav-link active">📄 View Documents</a>
+            </div>
+            <div class="nav-item">
+                <a href="users-dashboard.html" class="nav-link">👥 User Management</a>
+            </div>
+            <div class="nav-item">
+                <a href="settings-dashboard.html" class="nav-link">⚙️ Settings</a>
+            </div>
+        </nav>
+
+        <!-- Content Area -->
+        <div class="content-area">
+            <div class="section-box">
+                <h2>All Uploaded Documents</h2>
+                <p class="section-description">View, download, and manage all documents in the system.</p>
+
+                <div class="filters-section">
+                    <div class="filter-group">
+                        <input type="text" id="searchBox" placeholder="Search documents...">
+                        <select id="filterBy">
+                            <option value="all">All Documents</option>
+                            <option value="mine">My Documents</option>
+                            <option value="others">Others' Documents</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="table-container">
+                    <table class="documents-table">
+                        <thead>
+                            <tr>
+                                <th>Document Name</th>
+                                <th>Size</th>
+                                <th>Uploaded By</th>
+                                <th>Uploaded Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="documentsBody">
+                            <tr>
+                                <td colspan="5" style="text-align: center; padding: 20px;">Loading documents...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div id="docsMessage" class="message-box"></div>
+
+                <div class="document-stats">
+                    <h3>Document Statistics</h3>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-number" id="totalDocs">0</div>
+                            <div class="stat-label">Total Documents</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="totalUsers">0</div>
+                            <div class="stat-label">Contributors</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="totalStorage">0 MB</div>
+                            <div class="stat-label">Storage Used</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        let allDocuments = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuthentication();
+            document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+            document.getElementById('searchBox').addEventListener('input', filterDocuments);
+            document.getElementById('filterBy').addEventListener('change', filterDocuments);
+            loadDocuments();
+        });
+
+        async function loadDocuments() {
+            try {
+                const response = await fetch('/api/documents');
+                allDocuments = await response.json();
+                
+                updateStats();
+                displayDocuments(allDocuments);
+            } catch (error) {
+                console.error('Error loading documents:', error);
+                const tbody = document.getElementById('documentsBody');
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: red;">Error loading documents</td></tr>';
+            }
+        }
+
+        function filterDocuments() {
+            const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+            const filterType = document.getElementById('filterBy').value;
+            const user = JSON.parse(localStorage.getItem('currentUser')) || {};
+
+            let filtered = allDocuments.filter(doc => 
+                doc.originalname.toLowerCase().includes(searchTerm)
+            );
+
+            if (filterType === 'mine') {
+                filtered = filtered.filter(d => d.uploaded_by === user.username);
+            } else if (filterType === 'others') {
+                filtered = filtered.filter(d => d.uploaded_by !== user.username);
+            }
+
+            displayDocuments(filtered);
+        }
+
+        function displayDocuments(documents) {
+            const tbody = document.getElementById('documentsBody');
+            const isAdmin = localStorage.getItem('isAdmin') === 'true';
+            
+            if (!documents || documents.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">No documents found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = documents.map(doc => {
+                const uploadDate = new Date(doc.uploaded_at).toLocaleDateString();
+                const fileSize = (doc.size / 1024).toFixed(2) + ' KB';
+                const deleteBtn = isAdmin ? `<button class="btn-small btn-delete" onclick="deleteDocument(${doc.id})">Delete</button>` : '';
+
+                return `
+                    <tr>
+                        <td>${escapeHtml(doc.originalname)}</td>
+                        <td>${fileSize}</td>
+                        <td>${escapeHtml(doc.uploaded_by)}</td>
+                        <td>${uploadDate}</td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="btn-small btn-download" onclick="downloadDocument('${doc.filename}', '${escapeHtml(doc.originalname)}')">Download</button>
+                                ${deleteBtn}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function updateStats() {
+            const uniqueUploaders = new Set(allDocuments.map(d => d.uploaded_by)).size;
+            const totalSize = (allDocuments.reduce((sum, d) => sum + (d.size || 0), 0) / (1024 * 1024)).toFixed(2);
+
+            document.getElementById('totalDocs').textContent = allDocuments.length;
+            document.getElementById('totalUsers').textContent = uniqueUploaders;
+            document.getElementById('totalStorage').textContent = totalSize + ' MB';
+        }
+
+        async function downloadDocument(filename, originalname) {
+            try {
+                const response = await fetch(`/api/download/${encodeURIComponent(filename)}`);
+                if (!response.ok) {
+                    alert('Download failed');
+                    return;
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = originalname;
+                document.body.appendChild(link);
+                link.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(link);
+            } catch (error) {
+                console.error('Download error:', error);
+                alert('An error occurred during download');
+            }
+        }
+
+        async function deleteDocument(docId) {
+            if (!confirm('Are you sure you want to delete this document?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/documents/${docId}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    alert('Document deleted successfully');
+                    loadDocuments();
+                } else {
+                    alert(data.error || 'Delete failed');
+                }
+            } catch (error) {
+                console.error('Delete error:', error);
+                alert('An error occurred during deletion');
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Server - Admin Users Management</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1>👥 Manage Users</h1>
+                <div class="header-right">
+                    <span id="userDisplay" class="user-display"></span>
+                    <button id="logoutBtn" class="btn-logout">Logout</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Admin Navigation -->
+        <nav class="sidebar-nav admin-nav">
+            <div class="nav-item">
+                <a href="admin-dashboard.html" class="nav-link">📊 Dashboard</a>
+            </div>
+            <div class="nav-item">
+                  <a href="admin-users.html" class="nav-link active">👥 Manage Users</a>
+            </div>
+            <div class="nav-item">
+                <a href="admin-documents.html" class="nav-link">📁 All Documents</a>
+            </div>
+            <div class="nav-item">
+                <a href="admin-settings.html" class="nav-link">⚙️ System Settings</a>
+            </div>
+            <hr class="nav-divider">
+            <div class="nav-item">
+                <a href="upload-dashboard.html" class="nav-link worker-mode">👷 Switch to Worker Mode</a>
+            </div>
+        </nav>
+
+        <!-- Content Area -->
+        <div class="content-area">
+            <div class="admin-grid">
+                <!-- Create New User -->
+                <div class="section-box">
+                    <h2>➕ Create New User</h2>
+                    <p class="section-description">Add a new user to the system.</p>
+                    
+                    <form class="admin-form">
+                        <div class="form-group">
+                            <label>Username *</label>
+                            <input type="text" id="newUsername" placeholder="Enter username" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Password *</label>
+                            <input type="password" id="newUserPassword" placeholder="Enter password" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Email</label>
+                            <input type="email" id="newUserEmail" placeholder="user@example.com">
+                        </div>
+                        <div class="form-group">
+                            <label>Role</label>
+                            <select id="userRole">
+                                <option value="worker">Worker</option>
+                                <option value="supervisor">Supervisor</option>
+                            </select>
+                        </div>
+                        <button type="button" id="createUserBtn" class="btn-primary btn-large">Create User</button>
+                        <div id="createUserMessage" class="message-box"></div>
+                    </form>
+                </div>
+
+                <!-- User Statistics -->
+                <div class="section-box">
+                    <h2>📊 User Statistics</h2>
+                    <div class="stats-list">
+                        <div class="stat-item-admin">
+                            <span class="stat-name">Total Users</span>
+                            <span class="stat-value-large" id="totalUsersCount">0</span>
+                        </div>
+                        <div class="stat-item-admin">
+                            <span class="stat-name">Active Users</span>
+                            <span class="stat-value-large" id="activeUsersCount">0</span>
+                        </div>
+                        <div class="stat-item-admin">
+                            <span class="stat-name">Workers</span>
+                            <span class="stat-value-large" id="workerCount">0</span>
+                        </div>
+                        <div class="stat-item-admin">
+                            <span class="stat-name">Supervisors</span>
+                            <span class="stat-value-large" id="supervisorCount">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Saved Credentials -->
+            <div class="section-box" id="savedCredentialsSection" style="display: none; border-left: 4px solid #f39c12;">
+                <h2>📝 Saved User Credentials (Local)</h2>
+                <p style="color: #f39c12; font-size: 12px; margin-bottom: 15px;">⚠️ These credentials are saved locally in your browser for quick reference during testing. They are not stored on the server.</p>
+                
+                <div id="savedCredentialsList" style="display: flex; flex-direction: column; gap: 10px;">
+                    <!-- Saved credentials will appear here -->
+                </div>
+                
+                <button id="clearCredentialsBtn" class="btn-small btn-danger" style="margin-top: 15px;">Clear Saved Credentials</button>
+            </div>
+
+            <!-- All Users Table -->
+            <div class="section-box">
+                <h2>📋 All Users</h2>
+                
+                <div class="search-bar">
+                    <input type="text" id="userSearchAdmin" placeholder="Search users...">
+                </div>
+
+                <div class="table-container">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Username</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Documents</th>
+                                <th>Created Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                            <tr>
+                                <td colspan="6" style="text-align: center; padding: 20px;">Loading users...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuthentication();
+            
+            // Redirect non-admin users
+            const isAdmin = localStorage.getItem('isAdmin') === 'true';
+            if (!isAdmin) {
+                window.location.href = '/upload-dashboard.html';
+                return;
+            }
+            
+            document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+            document.getElementById('createUserBtn').addEventListener('click', handleCreateUser);
+            document.getElementById('userSearchAdmin').addEventListener('input', filterUsersAdmin);
+            document.getElementById('clearCredentialsBtn').addEventListener('click', clearAllCredentials);
+            loadAllUsersAdmin();
+            displaySavedCredentials(); // Display saved credentials on page load
+        });
+
+        async function loadAllUsersAdmin() {
+            try {
+                const response = await fetch('/api/users');
+                if (!response.ok) {
+                    throw new Error('Failed to load users');
+                }
+                const users = await response.json();
+
+                // Count documents per user
+                const docsResponse = await fetch('/api/documents');
+                const docs = docsResponse.ok ? await docsResponse.json() : [];
+
+                const uploaders = {};
+                docs.forEach(doc => {
+                    uploaders[doc.uploaded_by] = (uploaders[doc.uploaded_by] || 0) + 1;
+                });
+
+                // Format users with admin flag
+                const formattedUsers = users.map(user => ({
+                    username: user.username,
+                    role: user.username === 'admin' ? 'Administrator' : 'Worker',
+                    status: 'active',
+                    created: new Date(user.created_at).toLocaleDateString(),
+                    docs: uploaders[user.username] || 0
+                }));
+
+                displayUsersTableAdmin(formattedUsers);
+                updateUserStatsAdmin(formattedUsers);
+            } catch (error) {
+                console.error('Error loading users:', error);
+                const tbody = document.getElementById('usersTableBody');
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: red;">Error loading users</td></tr>';
+            }
+        }
+
+        function displayUsersTableAdmin(users) {
+            const tbody = document.getElementById('usersTableBody');
+            
+            if (!users || users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No users found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = users.map(user => `
+                <tr>
+                    <td><strong>${escapeHtml(user.username)}</strong></td>
+                    <td><span class="role-badge ${user.role.toLowerCase()}">${user.role}</span></td>
+                    <td><span class="status-badge active">● ${user.status}</span></td>
+                    <td>${user.docs}</td>
+                    <td>${new Date(user.created).toLocaleDateString()}</td>
+                    <td>
+                        <div class="action-buttons-admin">
+                            <button class="btn-small" onclick="editUser('${user.username}')">Edit</button>
+                            ${user.username !== 'admin' ? `<button class="btn-small btn-danger" onclick="deleteUser('${user.username}')">Delete</button>` : ''}
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function updateUserStatsAdmin(users) {
+            document.getElementById('totalUsersCount').textContent = users.length;
+            document.getElementById('activeUsersCount').textContent = users.filter(u => u.status === 'active').length;
+            document.getElementById('workerCount').textContent = users.filter(u => u.role === 'Worker').length;
+            document.getElementById('supervisorCount').textContent = users.filter(u => u.role === 'Supervisor').length;
+        }
+
+        function filterUsersAdmin() {
+            const search = document.getElementById('userSearchAdmin').value.toLowerCase();
+            const rows = document.querySelectorAll('#usersTableBody tr');
+            
+            rows.forEach(row => {
+                const username = row.cells[0].textContent.toLowerCase();
+                row.style.display = username.includes(search) ? '' : 'none';
+            });
+        }
+
+        async function handleCreateUser() {
+            const username = document.getElementById('newUsername').value.trim();
+            const password = document.getElementById('newUserPassword').value;
+            const email = document.getElementById('newUserEmail').value;
+            const role = document.getElementById('userRole').value;
+            const messageDiv = document.getElementById('createUserMessage');
+
+            messageDiv.className = 'message-box';
+            messageDiv.classList.remove('show');
+
+            if (!username || !password) {
+                messageDiv.textContent = 'Please enter username and password';
+                messageDiv.classList.add('error', 'show');
+                return;
+            }
+
+            if (password.length < 4) {
+                messageDiv.textContent = 'Password must be at least 4 characters';
+                messageDiv.classList.add('error', 'show');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/users', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username,
+                        password,
+                        email,
+                        role
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    messageDiv.textContent = `User "${username}" created successfully!`;
+                    messageDiv.classList.add('success', 'show');
+                    
+                    // Save credentials locally
+                    saveUserCredentials(username, password, email, role);
+                    
+                    // Clear form
+                    document.getElementById('newUsername').value = '';
+                    document.getElementById('newUserPassword').value = '';
+                    document.getElementById('newUserEmail').value = '';
+                    document.getElementById('userRole').value = 'worker';
+
+                    // Reload users list
+                    setTimeout(() => {
+                        messageDiv.classList.remove('show');
+                        loadAllUsersAdmin();
+                    }, 2000);
+                } else {
+                    messageDiv.textContent = data.error || 'Failed to create user';
+                    messageDiv.classList.add('error', 'show');
+                }
+            } catch (error) {
+                console.error('Error creating user:', error);
+                messageDiv.textContent = 'Error creating user: ' + error.message;
+                messageDiv.classList.add('error', 'show');
+            }
+        }
+
+        function saveUserCredentials(username, password, email, role) {
+            // Get existing credentials from localStorage
+            let credentials = JSON.parse(localStorage.getItem('savedUserCredentials')) || [];
+            
+            // Add new credential
+            credentials.push({
+                username: username,
+                password: password,
+                email: email,
+                role: role,
+                created: new Date().toLocaleString()
+            });
+            
+            // Save back to localStorage
+            localStorage.setItem('savedUserCredentials', JSON.stringify(credentials));
+            
+            // Display credentials
+            displaySavedCredentials();
+        }
+
+        function displaySavedCredentials() {
+            const credentials = JSON.parse(localStorage.getItem('savedUserCredentials')) || [];
+            const section = document.getElementById('savedCredentialsSection');
+            const list = document.getElementById('savedCredentialsList');
+            
+            if (credentials.length === 0) {
+                section.style.display = 'none';
+                return;
+            }
+            
+            section.style.display = 'block';
+            
+            list.innerHTML = credentials.map((cred, index) => `
+                <div style="padding: 12px; background: #f5f5f5; border-radius: 5px; border-left: 3px solid #f39c12;">
+                    <div style="margin-bottom: 8px;">
+                        <strong>Username:</strong> <code style="background: white; padding: 2px 6px; border-radius: 3px;">${escapeHtml(cred.username)}</code>
+                        <button class="btn-small" onclick="copyToClipboard('${escapeHtml(cred.username)}')" style="margin-left: 8px; padding: 4px 10px; font-size: 11px;">Copy</button>
+                    </div>
+                    <div style="margin-bottom: 8px;">
+                        <strong>Password:</strong> <code style="background: white; padding: 2px 6px; border-radius: 3px; font-family: monospace; letter-spacing: 1px;">${'●'.repeat(cred.password.length)}</code>
+                        <button class="btn-small" onclick="togglePasswordVisibility(${index})" style="margin-left: 8px; padding: 4px 10px; font-size: 11px;">Show</button>
+                        <button class="btn-small" onclick="copyToClipboard('${cred.password}')" style="margin-left: 4px; padding: 4px 10px; font-size: 11px;">Copy</button>
+                    </div>
+                    <div style="color: #999; font-size: 11px;">
+                        Created: ${cred.created}
+                    </div>
+                    <button class="btn-small btn-danger" onclick="removeCredential(${index})" style="margin-top: 8px; font-size: 11px;">Remove</button>
+                </div>
+            `).join('');
+        }
+
+        function togglePasswordVisibility(index) {
+            const credentials = JSON.parse(localStorage.getItem('savedUserCredentials')) || [];
+            const button = event.target;
+            
+            if (button.textContent === 'Show') {
+                const password = credentials[index].password;
+                alert('Password: ' + password);
+                button.textContent = 'Hide';
+            } else {
+                button.textContent = 'Show';
+            }
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Copied to clipboard!');
+            }).catch(() => {
+                alert('Failed to copy');
+            });
+        }
+
+        function removeCredential(index) {
+            if (confirm('Remove this credential?')) {
+                let credentials = JSON.parse(localStorage.getItem('savedUserCredentials')) || [];
+                credentials.splice(index, 1);
+                localStorage.setItem('savedUserCredentials', JSON.stringify(credentials));
+                displaySavedCredentials();
+            }
+        }
+
+        function editUser(username) {
+            alert(`Edit user: ${username} - Feature coming soon`);
+        }
+
+        function deleteUser(username) {
+            if (confirm(`Are you sure you want to delete user: ${username}?`)) {
+                alert(`User ${username} deleted - Feature coming soon`);
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

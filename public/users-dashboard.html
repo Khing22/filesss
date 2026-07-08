@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Server - User Management</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1>👥 User Management</h1>
+                <div class="header-right">
+                    <span id="userDisplay" class="user-display"></span>
+                    <button id="logoutBtn" class="btn-logout">Logout</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="sidebar-nav">
+            <div class="nav-item">
+                <a href="upload-dashboard.html" class="nav-link">📤 Upload Documents</a>
+            </div>
+            <div class="nav-item">
+                <a href="documents-dashboard.html" class="nav-link">📄 View Documents</a>
+            </div>
+               <!--<div class="nav-item">
+                <a href="users-dashboard.html" class="nav-link active">👥 User Management</a>
+            </div>-->
+            <div class="nav-item">
+                <a href="settings-dashboard.html" class="nav-link">⚙️ Settings</a>
+            </div>
+        </nav>
+
+        <!-- Content Area -->
+        <div class="content-area">
+            <div class="content-grid">
+                <!-- Current Users Section -->
+                <div class="section-box">
+                    <h2>Current Users</h2>
+                    <p class="section-description">View all users in the system.</p>
+                    
+                    <div class="search-bar">
+                        <input type="text" id="userSearch" placeholder="Search users...">
+                    </div>
+
+                    <div class="users-table-container">
+                        <table class="users-table">
+                            <thead>
+                                <tr>
+                                    <th>Username</th>
+                                    <th>Status</th>
+                                    <th>Created Date</th>
+                                    <th>Documents</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersBody">
+                                <tr>
+                                    <td colspan="5" style="text-align: center; padding: 20px;">Loading users...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div id="usersStatsMessage" class="message-box"></div>
+                </div>
+            </div>
+
+            <!-- User Statistics -->
+            <div class="section-box">
+                <h3>User Statistics</h3>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalUsers">0</div>
+                        <div class="stat-label">Total Users</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="activeUsers">0</div>
+                        <div class="stat-label">Active Users</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="topContributor">-</div>
+                        <div class="stat-label">Top Contributor</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        let allUsers = [];
+        let allDocuments = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuthentication();
+            
+            // Redirect non-admin users
+            const isAdmin = localStorage.getItem('isAdmin') === 'true';
+            if (!isAdmin) {
+                window.location.href = '/upload-dashboard.html';
+                return;
+            }
+            
+            document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+            document.getElementById('userSearch').addEventListener('input', filterUsers);
+            loadUsers();
+            loadUserStats();
+        });
+
+        async function loadUsers() {
+            try {
+                // In a real app, fetch from server
+                // For now, we'll simulate with current user
+                const response = await fetch('/api/check-auth');
+                const authData = await response.json();
+                
+                if (authData.authenticated) {
+                    allUsers = [
+                        { username: 'admin', created_at: '2024-01-01', status: 'active' },
+                        { username: authData.user.username, created_at: '2024-01-15', status: 'active' }
+                    ];
+                    displayUsers(allUsers);
+                }
+            } catch (error) {
+                console.error('Error loading users:', error);
+            }
+        }
+
+        function displayUsers(users) {
+            const tbody = document.getElementById('usersBody');
+            
+            if (!users || users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">No users found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = users.map(user => {
+                const createdDate = new Date(user.created_at).toLocaleDateString();
+                const docCount = allDocuments.filter(d => d.uploaded_by === user.username).length;
+
+                return `
+                    <tr>
+                        <td>
+                            <strong>${escapeHtml(user.username)}</strong>
+                        </td>
+                        <td><span class="status-badge active">${user.status}</span></td>
+                        <td>${createdDate}</td>
+                        <td><span class="doc-count">${docCount}</span></td>
+                        <td>
+                            <button class="btn-small btn-view">View</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function filterUsers() {
+            const searchTerm = document.getElementById('userSearch').value.toLowerCase();
+            const filtered = allUsers.filter(user => 
+                user.username.toLowerCase().includes(searchTerm)
+            );
+            displayUsers(filtered);
+        }
+
+        async function handleAddUser() {
+            const username = document.getElementById('newUsername').value;
+            const password = document.getElementById('newUserPassword').value;
+            const messageDiv = document.getElementById('userMessage');
+
+            messageDiv.className = 'message-box';
+            messageDiv.classList.remove('show');
+
+            if (!username || !password) {
+                messageDiv.textContent = 'Please enter username and password';
+                messageDiv.classList.add('error', 'show');
+                return;
+            }
+
+            if (username.length < 3) {
+                messageDiv.textContent = 'Username must be at least 3 characters';
+                messageDiv.classList.add('error', 'show');
+                return;
+            }
+
+            if (password.length < 4) {
+                messageDiv.textContent = 'Password must be at least 4 characters';
+                messageDiv.classList.add('error', 'show');
+                return;
+            }
+
+            // In a real app, send to server
+            messageDiv.textContent = 'User added successfully!';
+            messageDiv.classList.add('success', 'show');
+            document.getElementById('newUsername').value = '';
+            document.getElementById('newUserPassword').value = '';
+            document.getElementById('newUserEmail').value = '';
+            
+            setTimeout(() => {
+                messageDiv.classList.remove('show');
+            }, 3000);
+        }
+
+        async function loadUserStats() {
+            try {
+                const response = await fetch('/api/documents');
+                allDocuments = await response.json();
+
+                const uploaderCounts = {};
+                allDocuments.forEach(doc => {
+                    uploaderCounts[doc.uploaded_by] = (uploaderCounts[doc.uploaded_by] || 0) + 1;
+                });
+
+                const topUploader = Object.entries(uploaderCounts).sort((a, b) => b[1] - a[1])[0];
+
+                document.getElementById('totalUsers').textContent = (Object.keys(uploaderCounts).length + 1);
+                document.getElementById('activeUsers').textContent = (Object.keys(uploaderCounts).length + 1);
+                document.getElementById('topContributor').textContent = topUploader ? topUploader[0] : 'N/A';
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

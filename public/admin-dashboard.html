@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Server - Admin Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1>🔐 Admin Dashboard</h1>
+                <div class="header-right">
+                    <span id="userDisplay" class="user-display"></span>
+                    <button id="logoutBtn" class="btn-logout">Logout</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Admin Navigation -->
+        <nav class="sidebar-nav admin-nav">
+            <div class="nav-item">
+                <a href="admin-dashboard.html" class="nav-link active">📊 Dashboard</a>
+            </div>
+            <div class="nav-item">
+                <a href="admin-users.html" class="nav-link">👥 Manage Users</a>
+            </div>
+            <div class="nav-item">
+                <a href="admin-documents.html" class="nav-link">📁 All Documents</a>
+            </div>
+            <div class="nav-item">
+                <a href="admin-settings.html" class="nav-link">⚙️ System Settings</a>
+            </div>
+            <hr class="nav-divider">
+            <div class="nav-item">
+                <a href="upload-dashboard.html" class="nav-link worker-mode">👷 Switch to Worker Mode</a>
+            </div>
+        </nav>
+
+        <!-- Content Area -->
+        <div class="content-area">
+            <!-- Welcome Section -->
+            <div class="section-box admin-welcome">
+                <h2>Welcome to Admin Panel</h2>
+                <p>Manage your file server system, users, and documents from this central control hub.</p>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="stats-grid admin-stats">
+                <div class="stat-card big">
+                    <div class="stat-icon">📄</div>
+                    <div class="stat-number" id="totalDocsAdmin">0</div>
+                    <div class="stat-label">Total Documents</div>
+                </div>
+                <div class="stat-card big">
+                    <div class="stat-icon">👥</div>
+                    <div class="stat-number" id="totalUsersAdmin">0</div>
+                    <div class="stat-label">Active Users</div>
+                </div>
+                <div class="stat-card big">
+                    <div class="stat-icon">💾</div>
+                    <div class="stat-number" id="totalStorageAdmin">0 MB</div>
+                    <div class="stat-label">Storage Used</div>
+                </div>
+                <div class="stat-card big">
+                    <div class="stat-icon">⬆️</div>
+                    <div class="stat-number" id="todayUploads">0</div>
+                    <div class="stat-label">Uploads Today</div>
+                </div>
+            </div>
+
+            <!-- Main Admin Sections -->
+            <div class="admin-grid">
+                <!-- System Status -->
+                <div class="section-box">
+                    <h3>🟢 System Status</h3>
+                    <div class="status-item">
+                        <span class="status-label">Server Status</span>
+                        <span class="status-value online">● Online</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Database</span>
+                        <span class="status-value online">● Connected</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Upload Service</span>
+                        <span class="status-value online">● Active</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Disk Space</span>
+                        <span class="status-value warning">⚠️ Check</span>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="section-box">
+                    <h3>⚡ Quick Actions</h3>
+                    <div class="admin-actions">
+                        <button class="admin-btn" onclick="window.location.href='admin-users.html'">
+                            <span class="btn-icon">👤</span>
+                            <span>Add New User</span>
+                        </button>
+                        <button class="admin-btn" onclick="window.location.href='admin-settings.html'">
+                            <span class="btn-icon">🔑</span>
+                            <span>Update Password</span>
+                        </button>
+                        <button class="admin-btn" onclick="window.location.href='admin-documents.html'">
+                            <span class="btn-icon">🗑️</span>
+                            <span>Manage Documents</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="section-box">
+                <h3>📋 Recent Activity</h3>
+                <div id="recentActivityList" class="activity-list">
+                    <div class="activity-item">
+                        <span class="activity-icon">📤</span>
+                        <div class="activity-details">
+                            <div class="activity-text">System initialized</div>
+                            <div class="activity-time">Just now</div>
+                        </div>
+                    </div>
+                    <div class="activity-item">
+                        <span class="activity-icon">🔐</span>
+                        <div class="activity-details">
+                            <div class="activity-text">Admin logged in</div>
+                            <div class="activity-time">Just now</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Contributors -->
+            <div class="section-box">
+                <h3>🏆 Top Contributors</h3>
+                <div id="topContributorsList" class="contributors-list">
+                    <div class="contributor-item">
+                        <div class="contributor-rank">1</div>
+                        <div class="contributor-info">
+                            <div class="contributor-name">Loading...</div>
+                            <div class="contributor-docs">0 documents</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuthentication();
+            document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+            
+            // Check if user is admin
+            fetch('/api/check-auth')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.authenticated && data.user.username === 'admin') {
+                        loadAdminStats();
+                    } else {
+                        window.location.href = '/upload-dashboard.html';
+                    }
+                })
+                .catch(err => console.error('Auth error:', err));
+        });
+
+        function loadAdminStats() {
+            fetch('/api/documents')
+                .then(res => res.json())
+                .then(docs => {
+                    const totalSize = (docs.reduce((sum, d) => sum + (d.size || 0), 0) / (1024 * 1024)).toFixed(2);
+                    const today = new Date().toLocaleDateString();
+                    const todayUploads = docs.filter(d => new Date(d.uploaded_at).toLocaleDateString() === today).length;
+                    const uploaders = {};
+                    
+                    docs.forEach(doc => {
+                        uploaders[doc.uploaded_by] = (uploaders[doc.uploaded_by] || 0) + 1;
+                    });
+
+                    document.getElementById('totalDocsAdmin').textContent = docs.length;
+                    document.getElementById('totalUsersAdmin').textContent = Object.keys(uploaders).length;
+                    document.getElementById('totalStorageAdmin').textContent = totalSize + ' MB';
+                    document.getElementById('todayUploads').textContent = todayUploads;
+
+                    // Top contributors
+                    const topContributors = Object.entries(uploaders)
+                        .sort((a, b) => b[1] - a[1])
+                        .slice(0, 5);
+
+                    const contributorsList = document.getElementById('topContributorsList');
+                    contributorsList.innerHTML = topContributors.map((entry, index) => `
+                        <div class="contributor-item">
+                            <div class="contributor-rank">${index + 1}</div>
+                            <div class="contributor-info">
+                                <div class="contributor-name">${escapeHtml(entry[0])}</div>
+                                <div class="contributor-docs">${entry[1]} document${entry[1] !== 1 ? 's' : ''}</div>
+                            </div>
+                        </div>
+                    `).join('');
+                })
+                .catch(err => console.error('Error loading stats:', err));
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

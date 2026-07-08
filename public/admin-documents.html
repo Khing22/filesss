@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Server - Admin Documents</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1>📁 All Documents</h1>
+                <div class="header-right">
+                    <span id="userDisplay" class="user-display"></span>
+                    <button id="logoutBtn" class="btn-logout">Logout</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Admin Navigation -->
+        <nav class="sidebar-nav admin-nav">
+            <div class="nav-item">
+                <a href="admin-dashboard.html" class="nav-link">📊 Dashboard</a>
+            </div>
+            <div class="nav-item">
+                <a href="admin-users.html" class="nav-link">👥 Manage Users</a>
+            </div>
+            <div class="nav-item">
+                <a href="admin-documents.html" class="nav-link active">📁 All Documents</a>
+            </div>
+            <div class="nav-item">
+                <a href="admin-settings.html" class="nav-link">⚙️ System Settings</a>
+            </div>
+            <hr class="nav-divider">
+            <div class="nav-item">
+                <a href="upload-dashboard.html" class="nav-link worker-mode">👷 Switch to Worker Mode</a>
+            </div>
+        </nav>
+
+        <!-- Content Area -->
+        <div class="content-area">
+            <!-- Document Statistics -->
+            <div class="stats-grid admin-stats">
+                <div class="stat-card big">
+                    <div class="stat-icon">📄</div>
+                    <div class="stat-number" id="totalDocCount">0</div>
+                    <div class="stat-label">Total Documents</div>
+                </div>
+                <div class="stat-card big">
+                    <div class="stat-icon">💾</div>
+                    <div class="stat-number" id="totalSize">0 MB</div>
+                    <div class="stat-label">Storage Used</div>
+                </div>
+                <div class="stat-card big">
+                    <div class="stat-icon">📦</div>
+                    <div class="stat-number" id="largestFile">0 KB</div>
+                    <div class="stat-label">Largest File</div>
+                </div>
+                <div class="stat-card big">
+                    <div class="stat-icon">👤</div>
+                    <div class="stat-number" id="totalUploaders">0</div>
+                    <div class="stat-label">Contributors</div>
+                </div>
+            </div>
+
+            <!-- Filters and Search -->
+            <div class="section-box">
+                <h2>🔍 Search & Filter</h2>
+                <div class="filter-group">
+                    <input type="text" id="docSearch" placeholder="Search documents...">
+                    <select id="docFilterUser">
+                        <option value="">All Users</option>
+                    </select>
+                    <select id="docSortBy">
+                        <option value="date-desc">Newest First</option>
+                        <option value="date-asc">Oldest First</option>
+                        <option value="size-desc">Largest First</option>
+                        <option value="size-asc">Smallest First</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Documents Table -->
+            <div class="section-box">
+                <h2>📋 Document List</h2>
+                <div class="table-container">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Document Name</th>
+                                <th>Uploader</th>
+                                <th>Size</th>
+                                <th>Upload Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="docsTableBody">
+                            <tr>
+                                <td colspan="5" style="text-align: center; padding: 20px;">Loading documents...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        let allDocumentsAdmin = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuthentication();
+            
+            // Redirect non-admin users
+            const isAdmin = localStorage.getItem('isAdmin') === 'true';
+            if (!isAdmin) {
+                window.location.href = '/upload-dashboard.html';
+                return;
+            }
+            
+            document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+            document.getElementById('docSearch').addEventListener('input', filterDocsAdmin);
+            document.getElementById('docFilterUser').addEventListener('change', filterDocsAdmin);
+            document.getElementById('docSortBy').addEventListener('change', filterDocsAdmin);
+            loadAllDocumentsAdmin();
+        });
+
+        async function loadAllDocumentsAdmin() {
+            try {
+                const response = await fetch('/api/documents');
+                allDocumentsAdmin = await response.json();
+
+                // Populate user filter
+                const users = [...new Set(allDocumentsAdmin.map(d => d.uploaded_by))];
+                const filterSelect = document.getElementById('docFilterUser');
+                filterSelect.innerHTML = '<option value="">All Users</option>' + 
+                    users.map(u => `<option value="${u}">${u}</option>`).join('');
+
+                displayDocsTableAdmin(allDocumentsAdmin);
+                updateDocStatsAdmin(allDocumentsAdmin);
+            } catch (error) {
+                console.error('Error loading documents:', error);
+            }
+        }
+
+        function displayDocsTableAdmin(docs) {
+            const tbody = document.getElementById('docsTableBody');
+            
+            if (!docs || docs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No documents found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = docs.map(doc => {
+                const uploadDate = new Date(doc.uploaded_at).toLocaleDateString();
+                const fileSize = (doc.size / 1024).toFixed(2) + ' KB';
+
+                return `
+                    <tr>
+                        <td>${escapeHtml(doc.originalname)}</td>
+                        <td>${escapeHtml(doc.uploaded_by)}</td>
+                        <td>${fileSize}</td>
+                        <td>${uploadDate}</td>
+                        <td>
+                            <div class="action-buttons-admin">
+                                <button class="btn-small btn-download" onclick="downloadDocAdmin('${doc.filename}', '${escapeHtml(doc.originalname)}')">Download</button>
+                                <button class="btn-small btn-danger" onclick="deleteDocAdmin(${doc.id})">Delete</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function filterDocsAdmin() {
+            const search = document.getElementById('docSearch').value.toLowerCase();
+            const filterUser = document.getElementById('docFilterUser').value;
+            const sortBy = document.getElementById('docSortBy').value;
+
+            let filtered = allDocumentsAdmin.filter(doc => {
+                const matchSearch = doc.originalname.toLowerCase().includes(search);
+                const matchUser = !filterUser || doc.uploaded_by === filterUser;
+                return matchSearch && matchUser;
+            });
+
+            // Sort
+            if (sortBy === 'date-desc') filtered.sort((a, b) => new Date(b.uploaded_at) - new Date(a.uploaded_at));
+            else if (sortBy === 'date-asc') filtered.sort((a, b) => new Date(a.uploaded_at) - new Date(b.uploaded_at));
+            else if (sortBy === 'size-desc') filtered.sort((a, b) => b.size - a.size);
+            else if (sortBy === 'size-asc') filtered.sort((a, b) => a.size - b.size);
+
+            displayDocsTableAdmin(filtered);
+        }
+
+        function updateDocStatsAdmin(docs) {
+            const totalSize = (docs.reduce((sum, d) => sum + (d.size || 0), 0) / (1024 * 1024)).toFixed(2);
+            const largestFile = docs.length > 0 ? (Math.max(...docs.map(d => d.size || 0)) / 1024).toFixed(2) : 0;
+            const uploaders = new Set(docs.map(d => d.uploaded_by)).size;
+
+            document.getElementById('totalDocCount').textContent = docs.length;
+            document.getElementById('totalSize').textContent = totalSize + ' MB';
+            document.getElementById('largestFile').textContent = largestFile + ' KB';
+            document.getElementById('totalUploaders').textContent = uploaders;
+        }
+
+        async function downloadDocAdmin(filename, originalname) {
+            try {
+                const response = await fetch(`/api/download/${encodeURIComponent(filename)}`);
+                if (!response.ok) return;
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = originalname;
+                document.body.appendChild(link);
+                link.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(link);
+            } catch (error) {
+                console.error('Download error:', error);
+            }
+        }
+
+        async function deleteDocAdmin(docId) {
+            if (!confirm('Permanently delete this document?')) return;
+
+            try {
+                const response = await fetch(`/api/documents/${docId}`, { method: 'DELETE' });
+                if (response.ok) {
+                    loadAllDocumentsAdmin();
+                } else {
+                    alert('Delete failed');
+                }
+            } catch (error) {
+                console.error('Delete error:', error);
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

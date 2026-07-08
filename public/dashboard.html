@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Server - Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1>File Server Dashboard</h1>
+                <div class="header-right">
+                    <span id="userDisplay" class="user-display"></span>
+                    <button id="logoutBtn" class="btn-logout">Logout</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <div class="tabs-container">
+            <button class="tab-button active" data-tab="upload">📤 Upload Documents</button>
+            <button class="tab-button" data-tab="view">📄 View Documents</button>
+            <button class="tab-button" data-tab="settings">⚙️ Settings</button>
+        </div>
+
+        <!-- Content Area -->
+        <div class="content-area">
+            <!-- Section 1: Upload Documents -->
+            <div id="upload" class="tab-content active">
+                <div class="section-box">
+                    <h2>Upload Word Document</h2>
+                    <p class="section-description">Upload a Word document (.doc or .docx). Password required to protect this section.</p>
+                    
+                    <div class="upload-form">
+                        <div class="form-group">
+                            <label for="uploadPassword">Upload Password *</label>
+                            <input type="password" id="uploadPassword" placeholder="Enter upload password" required>
+                            <small>Default password: 1234</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="documentFile">Select Word Document *</label>
+                            <input type="file" id="documentFile" accept=".doc,.docx" required>
+                            <small>Accepted formats: .doc, .docx</small>
+                        </div>
+
+                        <button id="uploadBtn" class="btn-primary">Upload Document</button>
+                    </div>
+
+                    <div id="uploadMessage" class="message-box"></div>
+                </div>
+            </div>
+
+            <!-- Section 2: View Documents -->
+            <div id="view" class="tab-content">
+                <div class="section-box">
+                    <h2>View All Documents</h2>
+                    <p class="section-description">View and manage all uploaded documents.</p>
+                    
+                    <div id="documentsTableContainer" class="table-container">
+                        <table class="documents-table">
+                            <thead>
+                                <tr>
+                                    <th>Document Name</th>
+                                    <th>Size</th>
+                                    <th>Uploaded By</th>
+                                    <th>Uploaded Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="documentsBody">
+                                <tr>
+                                    <td colspan="5" style="text-align: center; padding: 20px;">Loading documents...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 3: User Management -->
+            <div id="users" class="tab-content">
+                <div class="section-box">
+                    <h2>User Management</h2>
+                    <p class="section-description">Manage system users and their access.</p>
+                    
+                    <div class="user-management">
+                        <div class="form-group">
+                            <label for="newUsername">New Username</label>
+                            <input type="text" id="newUsername" placeholder="Enter new username">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="newUserPassword">Password</label>
+                            <input type="password" id="newUserPassword" placeholder="Enter password">
+                        </div>
+
+                        <button id="addUserBtn" class="btn-primary">Add User</button>
+                        <div id="userMessage" class="message-box"></div>
+                    </div>
+
+                    <div class="current-users">
+                        <h3>Current Users</h3>
+                        <ul id="usersList">
+                            <li>Current user info will appear here</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 4: Settings -->
+            <div id="settings" class="tab-content">
+                <div class="section-box">
+                    <h2>Settings</h2>
+                    <p class="section-description">Configure system settings.</p>
+                    
+                    <div class="settings-form">
+                        <h3>Upload Password</h3>
+                        <p class="setting-description">Set the password required to upload documents.</p>
+                        
+                        <div class="form-group">
+                            <label for="newUploadPassword">New Upload Password</label>
+                            <input type="password" id="newUploadPassword" placeholder="Enter new upload password" minlength="4">
+                            <small>Minimum 4 characters</small>
+                        </div>
+
+                        <button id="updatePasswordBtn" class="btn-primary">Update Upload Password</button>
+                        <div id="settingsMessage" class="message-box"></div>
+
+                        <hr style="margin: 30px 0;">
+
+                        <h3>About</h3>
+                        <p>File Server v1.0.0</p>
+                        <p>Secure document management system</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

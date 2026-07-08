@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Server - Admin Settings</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1>⚙️ System Settings</h1>
+                <div class="header-right">
+                    <span id="userDisplay" class="user-display"></span>
+                    <button id="logoutBtn" class="btn-logout">Logout</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Admin Navigation -->
+        <nav class="sidebar-nav admin-nav">
+            <div class="nav-item">
+                <a href="admin-dashboard.html" class="nav-link">📊 Dashboard</a>
+            </div>
+            <div class="nav-item">
+                <a href="admin-users.html" class="nav-link">👥 Manage Users</a>
+            </div>
+            <div class="nav-item">
+                <a href="admin-documents.html" class="nav-link">📁 All Documents</a>
+            </div>
+            <div class="nav-item">
+                <a href="admin-settings.html" class="nav-link active">⚙️ System Settings</a>
+            </div>
+            <hr class="nav-divider">
+            <div class="nav-item">
+                <a href="upload-dashboard.html" class="nav-link worker-mode">👷 Switch to Worker Mode</a>
+            </div>
+        </nav>
+
+        <!-- Content Area -->
+        <div class="content-area">
+            <div class="admin-grid">
+                <!-- Upload Settings -->
+                <div class="section-box">
+                    <h2>🔐 Upload Protection</h2>
+                    <p>Configure upload password protection.</p>
+                    
+                    <div class="settings-form">
+                        <div class="form-group">
+                            <label>Current Upload Password</label>
+                            <input type="password" id="currentUploadPass" placeholder="••••••••" disabled>
+                        </div>
+
+                        <div class="form-group">
+                            <label>New Upload Password</label>
+                            <input type="password" id="newUploadPassword" placeholder="Enter new password" minlength="4">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Confirm Password</label>
+                            <input type="password" id="confirmUploadPassword" placeholder="Confirm password" minlength="4">
+                        </div>
+
+                        <button id="updateUploadPassBtn" class="btn-primary btn-large">Update Upload Password</button>
+                        <div id="uploadPassMessage" class="message-box"></div>
+                    </div>
+                </div>
+
+                <!-- System Configuration -->
+                 <!--  <div class="section-box">
+                    <h2>⚙️ System Configuration</h2>
+                    
+                    <div class="settings-list">
+                        <div class="setting-item">
+                            <span class="setting-label">Max File Size</span>
+                            <span class="setting-value">50 MB</span>
+                        </div>
+                        <div class="setting-item">
+                            <span class="setting-label">Database</span>
+                            <span class="setting-value">SQLite</span>
+                        </div>
+                        <div class="setting-item">
+                            <span class="setting-label">Server</span>
+                            <span class="setting-value">Node.js/Express</span>
+                        </div>
+                        <div class="setting-item">
+                            <span class="setting-label">Version</span>
+                            <span class="setting-value">1.0.0</span>
+                        </div>
+                        <div class="setting-item">
+                            <span class="setting-label">Status</span>
+                            <span class="setting-value online">● Online</span>
+                        </div>
+                    </div>
+                </div>
+            </div> -->
+
+            <!-- Security Settings -->
+            <div class="section-box">
+                <h2>🔒 Security Settings</h2>
+                
+                <div class="security-options">
+                    <div class="security-option">
+                        <div class="option-left">
+                            <h4>Session Timeout</h4>
+                            <p>Automatically logout users after 1 hour of inactivity</p>
+                        </div>
+                        <div class="option-right">
+                            <input type="checkbox" checked> Enabled
+                        </div>
+                    </div>
+
+                    <div class="security-option">
+                        <div class="option-left">
+                            <h4>Password Expiry</h4>
+                            <p>Force users to change password every 90 days</p>
+                        </div>
+                        <div class="option-right">
+                            <input type="checkbox"> Enabled
+                        </div>
+                    </div>
+
+                    <div class="security-option">
+                        <div class="option-left">
+                            <h4>Login Attempts</h4>
+                            <p>Lock account after 5 failed login attempts</p>
+                        </div>
+                        <div class="option-right">
+                            <input type="checkbox" checked> Enabled
+                        </div>
+                    </div>
+
+                    <div class="security-option">
+                        <div class="option-left">
+                            <h4>Audit Logging</h4>
+                            <p>Log all system activities and user actions</p>
+                        </div>
+                        <div class="option-right">
+                            <input type="checkbox" checked> Enabled
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Backup & Maintenance -->
+            <!--  <div class="section-box danger-zone">
+                <h2>⚠️ Backup & Maintenance</h2>
+                
+                <div class="admin-actions">
+                    <button class="admin-btn danger">
+                        <span class="btn-icon">💾</span>
+                        <span>Backup Database</span>
+                    </button>
+                    <button class="admin-btn danger">
+                        <span class="btn-icon">🔄</span>
+                        <span>Clear Old Logs</span>
+                    </button>
+                    <button class="admin-btn danger">
+                        <span class="btn-icon">⚡</span>
+                        <span>Restart Server</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>-->
+
+    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuthentication();
+            
+            // Redirect non-admin users
+            const isAdmin = localStorage.getItem('isAdmin') === 'true';
+            if (!isAdmin) {
+                window.location.href = '/upload-dashboard.html';
+                return;
+            }
+            
+            document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+            document.getElementById('updateUploadPassBtn').addEventListener('click', handleUpdateUploadPass);
+        });
+
+        function handleUpdateUploadPass() {
+            const newPass = document.getElementById('newUploadPassword').value;
+            const confirmPass = document.getElementById('confirmUploadPassword').value;
+            const messageDiv = document.getElementById('uploadPassMessage');
+
+            messageDiv.className = 'message-box';
+            messageDiv.classList.remove('show');
+
+            if (!newPass || !confirmPass) {
+                messageDiv.textContent = 'Please enter and confirm password';
+                messageDiv.classList.add('error', 'show');
+                return;
+            }
+
+            if (newPass !== confirmPass) {
+                messageDiv.textContent = 'Passwords do not match';
+                messageDiv.classList.add('error', 'show');
+                return;
+            }
+
+            if (newPass.length < 4) {
+                messageDiv.textContent = 'Password must be at least 4 characters';
+                messageDiv.classList.add('error', 'show');
+                return;
+            }
+
+            fetch('/api/settings/update-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ newPassword: newPass })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    messageDiv.textContent = 'Upload password updated!';
+                    messageDiv.classList.add('success', 'show');
+                    document.getElementById('newUploadPassword').value = '';
+                    document.getElementById('confirmUploadPassword').value = '';
+                } else {
+                    messageDiv.textContent = data.error || 'Update failed';
+                    messageDiv.classList.add('error', 'show');
+                }
+            })
+            .catch(err => {
+                messageDiv.textContent = 'Error updating password';
+                messageDiv.classList.add('error', 'show');
+            });
+        }
+    </script>
+</body>
+</html>

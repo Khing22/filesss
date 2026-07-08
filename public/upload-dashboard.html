@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Server - Upload Documents</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1>📤 Upload Documents</h1>
+                <div class="header-right">
+                    <span id="userDisplay" class="user-display"></span>
+                    <button id="logoutBtn" class="btn-logout">Logout</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="sidebar-nav">
+            <div class="nav-item">
+                <a href="upload-dashboard.html" class="nav-link active">📤 Upload Documents</a>
+            </div>
+            <div class="nav-item">
+                <a href="documents-dashboard.html" class="nav-link">📄 View Documents</a>
+            </div>
+          <!--  <div class="nav-item">
+                <a href="users-dashboard.html" class="nav-link">👥 User Management</a>
+            </div>-->
+            <div class="nav-item">
+                <a href="settings-dashboard.html" class="nav-link">⚙️ Settings</a>
+            </div>
+        </nav>
+
+        <!-- Content Area -->
+        <div class="content-area">
+            <div class="section-box">
+                <h2>Upload Word Document</h2>
+                <p class="section-description">Upload a Word document (.doc or .docx) securely. Password protection required to prevent unauthorized uploads.</p>
+                
+                <div class="upload-form">
+                    <div class="form-group">
+                        <label for="uploadPassword">Upload Password *</label>
+                        <input type="password" id="uploadPassword" placeholder="Enter upload password" required>
+                        <small>Required to upload documents. Contact administrator if you don't know it.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="documentFile">Select Word Document *</label>
+                        <input type="file" id="documentFile" accept=".doc,.docx" required>
+                        <small>Accepted formats: .doc, .docx (Microsoft Word)</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="documentDescription">Description (Optional)</label>
+                        <textarea id="documentDescription" placeholder="Enter document description" rows="3"></textarea>
+                    </div>
+
+                    <button id="uploadBtn" class="btn-primary btn-large">Upload Document</button>
+                </div>
+
+                <div id="uploadMessage" class="message-box"></div>
+
+                <div class="upload-stats">
+                    <h3>Upload Statistics</h3>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-number" id="totalDocuments">0</div>
+                            <div class="stat-label">Total Documents</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="totalSize">0 MB</div>
+                            <div class="stat-label">Total Size</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="yourDocuments">0</div>
+                            <div class="stat-label">Your Uploads</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="recent-uploads">
+                    <h3>Your Recent Uploads</h3>
+                    <div id="recentUploadsList" class="uploads-list">
+                        <p class="empty-state">No recent uploads</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuthentication();
+            document.getElementById('uploadBtn').addEventListener('click', handleUpload);
+            document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+            loadUploadStats();
+        });
+
+        function loadUploadStats() {
+            fetch('/api/documents')
+                .then(res => res.json())
+                .then(docs => {
+                    const user = JSON.parse(localStorage.getItem('currentUser')) || {};
+                    const userDocs = docs.filter(d => d.uploaded_by === user.username);
+                    
+                    document.getElementById('totalDocuments').textContent = docs.length;
+                    document.getElementById('yourDocuments').textContent = userDocs.length;
+                    
+                    const totalSize = (docs.reduce((sum, d) => sum + (d.size || 0), 0) / (1024 * 1024)).toFixed(2);
+                    document.getElementById('totalSize').textContent = totalSize + ' MB';
+
+                    const recentList = userDocs.slice(0, 5).map(doc => {
+                        const date = new Date(doc.uploaded_at).toLocaleDateString();
+                        return `<div class="upload-item"><span>${doc.originalname}</span><span class="date">${date}</span></div>`;
+                    }).join('');
+                    
+                    document.getElementById('recentUploadsList').innerHTML = recentList || '<p class="empty-state">No uploads yet</p>';
+                })
+                .catch(err => console.error('Error loading stats:', err));
+        }
+    </script>
+</body>
+</html>
